@@ -1,0 +1,8 @@
+accelerate==1.1.1
+coremltools==8.0
+inquirer==3.4.0
+pydantic==2.10.3
+torch==2.4.0
+transformers==4.44.2
+
+${HOME}/Projects/eightarmfish/libs/logger
