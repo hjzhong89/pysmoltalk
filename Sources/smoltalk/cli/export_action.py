@@ -62,7 +62,7 @@ def get_export_dir() -> str:
     """
     response = inquirer.prompt([
         inquirer.Path('export_dir',
-                      message="Provide existing parent directory for exported model. Model will be saved to a new subdirectory.",
+                      message="Provide existing parent directory. Model will be saved to a new subdirectory.",
                       path_type=inquirer.Path.DIRECTORY,
                       exists=True)
     ])

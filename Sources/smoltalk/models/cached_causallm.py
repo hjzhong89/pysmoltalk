@@ -5,7 +5,11 @@ from smoltalk.models.cache import SliceUpdateKeyValueCache
 
 
 class KvCacheStateLlamaForCausalLM(torch.nn.Module):
-    """Model wrapper to swap cache implementation and register as buffers."""
+    """
+    Model wrapper to swap cache implementation and register as buffers.
+
+    Reference: https://machinelearning.apple.com/research/core-ml-on-device-llama
+    """
 
     def __init__(
             self,

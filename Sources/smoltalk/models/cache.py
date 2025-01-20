@@ -5,7 +5,11 @@ from transformers.cache_utils import Cache
 
 
 class SliceUpdateKeyValueCache(Cache):
-    """Helper class for in-place slice updating key/value caches."""
+    """
+    Helper class for in-place slice updating key/value caches.
+
+    Reference: https://machinelearning.apple.com/research/core-ml-on-device-llama
+    """
 
     def __init__(
             self,

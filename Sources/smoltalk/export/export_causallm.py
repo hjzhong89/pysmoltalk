@@ -10,11 +10,6 @@ from transformers import LlamaConfig
 from smoltalk.models.cached_causallm import KvCacheStateLlamaForCausalLM
 
 logger = get_logger()
-system_prompt_rewrite = "You are an AI writing assistant. Your task is to rewrite the user's email to make it more professional and approachable while maintaining its main points and key message. Do not return any text other than the rewritten message."
-user_prompt_rewrite = "Rewrite the message below to make it more friendly and approachable while maintaining its main points and key message. Do not add any new information or return any text other than the rewritten message\nThe message:"
-messages = [{"role": "system", "content": system_prompt_rewrite},
-            {"role": "user",
-             "content": f"{user_prompt_rewrite} The CI is failing after your last commit!"}]
 
 
 def export_causallm(pretrained_dir_or_name: str,
@@ -23,7 +18,7 @@ def export_causallm(pretrained_dir_or_name: str,
                     context_size: int = 4096,
                     device: str = "mps"):
     """
-    Convert a Llama-type, Causal PyTorch LLM to MLModel format with CoreML Tools
+    Convert a Causal PyTorch LLM to MLModel format with CoreML Tools
     :param pretrained_dir_or_name: Passed to the underlying HF model's #from_pretrained method
     :param export_dir: The parent dir to export models to
     :param batch_size: The max batch size for model inferencing
