@@ -50,7 +50,7 @@ def get_model_source() -> str:
                 inquirer.Text('pretrained_model',
                               message="Provide Model Repository Name")
             ])
-            return response["source_dir"]
+            return response["pretrained_model"]
         case _:
             return source
 

@@ -2,5 +2,5 @@ Resources/
 resources/
 .venv/
 .idea
-.DS_Store/
-**/__pychace__/
+.DS_Store
+**/__pycache__/
