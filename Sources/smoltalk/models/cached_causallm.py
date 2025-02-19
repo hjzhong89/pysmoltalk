@@ -1,4 +1,5 @@
 import torch
+from transformers import Qwen2ForCausalLM
 from transformers.models.llama.modeling_llama import LlamaForCausalLM
 
 from smoltalk.models.cache import SliceUpdateKeyValueCache
@@ -20,7 +21,7 @@ class KvCacheStateLlamaForCausalLM(torch.nn.Module):
             device: str = "mps"
     ) -> None:
         super().__init__()
-        self.model = LlamaForCausalLM.from_pretrained(model_path).to(device)
+        self.model = Qwen2ForCausalLM.from_pretrained(model_path).to(device)
         self.config = self.model.config
 
         self.kv_cache_shape: tuple[int, ...] = (

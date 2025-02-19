@@ -46,3 +46,6 @@ class SliceUpdateKeyValueCache(Cache):
     def get_seq_length(self, _: int = 0) -> int:
         """Get the sequence length of the cache."""
         return self.past_seen_tokens
+
+    def get_max_length(self) -> Optional[int]:
+        return None
