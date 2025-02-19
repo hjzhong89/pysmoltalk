@@ -15,15 +15,15 @@ class SliceUpdateKeyValueCache(Cache):
             self,
             *,
             shape: Sequence[int],
+            device: torch.device,
             dtype: torch.dtype = torch.float32,
-            device: str = "mps"
     ) -> None:
         """Create key/value cache of shape:
         (#layers, batch_size, #kv_heads, context_size, head_dim)."""
         super().__init__()
         self.past_seen_tokens: int = 0
-        self.k: torch.Tensor = torch.zeros(shape, dtype=dtype).to(device)
-        self.v: torch.Tensor = torch.zeros(shape, dtype=dtype).to(device)
+        self.k: torch.Tensor = torch.zeros(shape, dtype=dtype, device=device)
+        self.v: torch.Tensor = torch.zeros(shape, dtype=dtype, device=device)
 
     def update(
             self,
@@ -46,3 +46,7 @@ class SliceUpdateKeyValueCache(Cache):
     def get_seq_length(self, _: int = 0) -> int:
         """Get the sequence length of the cache."""
         return self.past_seen_tokens
+
+    def get_max_length(self) -> Optional[int]:
+        """Returns the maximum sequence length of the cached states. DynamicCache does not have a maximum length."""
+        return None

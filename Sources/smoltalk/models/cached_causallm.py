@@ -1,10 +1,10 @@
 import torch
-from transformers.models.llama.modeling_llama import LlamaForCausalLM
+from transformers import Qwen2ForCausalLM
 
 from smoltalk.models.cache import SliceUpdateKeyValueCache
 
 
-class KvCacheStateLlamaForCausalLM(torch.nn.Module):
+class KvCacheStateForCausalLM(torch.nn.Module):
     """
     Model wrapper to swap cache implementation and register as buffers.
 
@@ -20,7 +20,7 @@ class KvCacheStateLlamaForCausalLM(torch.nn.Module):
             device: str = "mps"
     ) -> None:
         super().__init__()
-        self.model = LlamaForCausalLM.from_pretrained(model_path).to(device)
+        self.model = Qwen2ForCausalLM.from_pretrained(model_path).to(device)
         self.config = self.model.config
 
         self.kv_cache_shape: tuple[int, ...] = (
@@ -31,7 +31,7 @@ class KvCacheStateLlamaForCausalLM(torch.nn.Module):
             self.config.hidden_size // self.config.num_attention_heads,
         )
         # Register KV cache buffers to be recognized as Core ML states
-        self.kv_cache = SliceUpdateKeyValueCache(shape=self.kv_cache_shape, device=device)
+        self.kv_cache = SliceUpdateKeyValueCache(shape=self.kv_cache_shape, device=torch.device(device))
         self.register_buffer("keyCache", self.kv_cache.k)
         self.register_buffer("valueCache", self.kv_cache.v)
 
