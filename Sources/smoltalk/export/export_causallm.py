@@ -5,11 +5,65 @@ import coremltools as ct
 import numpy as np
 import torch
 from logger import get_logger
-from transformers import LlamaConfig
+from transformers import LlamaConfig, PreTrainedTokenizer, AutoTokenizer
 
 from smoltalk.models.cached_causallm import KvCacheStateLlamaForCausalLM
 
 logger = get_logger()
+now = datetime.date.today().strftime("%m%d%Y")
+
+
+def load_model(pretrained_dir_or_name: str,
+               context_size: int = 4096,
+               device: str = "mps") -> (KvCacheStateLlamaForCausalLM, PreTrainedTokenizer):
+    logger.info(f"Loading KvCacheStateLlamaForCausalLM: {pretrained_dir_or_name}")
+
+    torch_model = KvCacheStateLlamaForCausalLM(pretrained_dir_or_name,
+                                               context_size=context_size,
+                                               device=device)
+    torch_model.eval()
+    tokenizer = AutoTokenizer.from_pretrained(pretrained_dir_or_name)
+
+
+def create_inputs(tokenizer: PreTrainedTokenizer | None = None,
+                  device: str = "mps",
+                  zeros: bool = False) -> (torch.Tensor, torch.Tensor):
+    if zeros:
+        # Initialize and trace PyTorch model
+        example_inputs = torch.zeros((1, 2), dtype=torch.int32).to(device)
+        causal_mask = torch.zeros((1, 1, 2, 5), dtype=torch.float32).to(device)
+        return example_inputs, causal_mask
+    else:
+        input_text = "Please write a fun, casual, and appetizing description for miso soup.<think>\n"
+        inputs: torch.Tensor = tokenizer.encode(input_text, return_tensors="pt")
+        token_count = inputs.size(dim=1)
+        logger.info(f"Input Shape: {inputs.shape}")
+
+        logger.info("Creating causal mask")
+        causal_mask = [[[]]]
+        for i in range(token_count):
+            layer = [0 if j <= i else -torch.inf for j in range(token_count)]
+            causal_mask[0][0].append(layer)
+
+        print(f"Created causal mask: {causal_mask}")
+        causal_mask = torch.tensor(causal_mask)
+        logger.info(f"Created causal Mask: {causal_mask.shape}")
+
+        return inputs, causal_mask
+
+
+def trace_model(torch_model: torch.nn.Module,
+                example_inputs: torch.Tensor,
+                causal_mask: torch.Tensor,
+                export_dir: Path,
+                device: str = "mps") -> torch.jit.ScriptModule:
+
+    traced_model: torch.jit.ScriptModule = torch.jit.script(torch_model.to(device).eval(),
+                                                            example_inputs=[(example_inputs, causal_mask)])
+
+    traced_model_path = export_dir.joinpath(f"pysmoltalk_traced_{now}.pt")
+    torch.save(traced_model, traced_model_path)
+    return traced_model
 
 
 def export_causallm(pretrained_dir_or_name: str,
@@ -26,21 +80,16 @@ def export_causallm(pretrained_dir_or_name: str,
     :param device: "mps" or "cpu"
     :return:
     """
-    logger.info(f"Loading KvCacheStateLlamaForCausalLM: {pretrained_dir_or_name}")
-    now = datetime.date.today().strftime("%m%d%Y")
+    (torch_model, tokenizer) = load_model(pretrained_dir_or_name, context_size, device)
 
-    torch_model = KvCacheStateLlamaForCausalLM(pretrained_dir_or_name,
-                                               context_size=context_size,
-                                               device=device)
+    (example_inputs, causal_mask) = create_inputs(tokenizer)
 
-    # Initialize and trace PyTorch model
-    example_inputs: tuple[torch.Tensor, ...] = (
-        torch.zeros((1, 2), dtype=torch.int32).to(device),
-        torch.zeros((1, 1, 2, 5), dtype=torch.float32).to(device)
-    )
-    traced_model: torch.jit.ScriptModule = torch.jit.trace(
-        torch_model.to(device).eval(), example_inputs=example_inputs
-    )
+    traced_model = trace_model(torch_model,
+                               example_inputs,
+                               causal_mask,
+                               export_dir,
+                               device)
+
 
     # Convert to Core ML
     query_size = ct.RangeDim(lower_bound=1, upper_bound=context_size, default=1)
@@ -82,7 +131,8 @@ def export_causallm(pretrained_dir_or_name: str,
 
     mlmodel.input_description["inputIds"] = "Flexible shaped tokenized inputs"
     mlmodel.input_description["causalMask"] = f"[1, 1, [1, {context_size}], [1, {context_size}]] causal mask"
-    mlmodel.output_description["logits"] = f"[batchSize, contextSize, vocabSize]; terminating tokens: {terminating_tokens}"
+    mlmodel.output_description[
+        "logits"] = f"[batchSize, contextSize, vocabSize]; terminating tokens: {terminating_tokens}"
 
     op_config = ct.optimize.coreml.OpLinearQuantizerConfig(
         mode="linear_symmetric",
